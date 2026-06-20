@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manager Dashboard</title>
+  <link rel="stylesheet" href="/assets/app.css" />
+</head>
+<body>
+  <div id="toast-root" class="toast-root"></div>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Management</p>
+        <h1>Manager Dashboard</h1>
+        <p class="muted">Menu availability, revenue summary and audit log.</p>
+      </div>
+      <div class="actions">
+        <button class="button ghost" onclick="loadManagerData()">Refresh</button>
+        <a class="button ghost" href="/">Home</a>
+      </div>
+    </header>
+
+    <section class="layout two">
+      <section class="card">
+        <h2>Menu Availability</h2>
+        <div id="manager-menu" class="list"></div>
+      </section>
+      <aside class="stack">
+        <section class="card">
+          <h2>Revenue Summary</h2>
+          <div id="summary" class="summary"></div>
+        </section>
+        <section class="card">
+          <h2>Audit Log</h2>
+          <div id="audit-log" class="list"></div>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <script src="/assets/api.js"></script>
+  <script src="/assets/notifications.js"></script>
+  <script src="/assets/manager.js"></script>
+</body>
+</html>

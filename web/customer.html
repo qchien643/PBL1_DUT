@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Customer Table</title>
+  <link rel="stylesheet" href="/assets/app.css" />
+</head>
+<body>
+  <div id="toast-root" class="toast-root"></div>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Customer Screen</p>
+        <h1 id="page-title">Table</h1>
+        <p id="session-banner" class="muted">Loading session...</p>
+      </div>
+      <a class="button ghost" href="/">Home</a>
+    </header>
+
+    <section class="layout two">
+      <section>
+        <div class="section-title">
+          <h2>Menu</h2>
+          <button class="button ghost" onclick="loadCustomerData()">Refresh</button>
+        </div>
+        <div id="menu-grid" class="grid menu-grid"></div>
+      </section>
+
+      <aside class="stack">
+        <section class="card">
+          <div class="section-title">
+            <h2>Cart</h2>
+            <span id="cart-total" class="badge">0 VND</span>
+          </div>
+          <div id="cart-lines" class="list"></div>
+          <button class="button primary full" onclick="submitOrder()">Submit Order</button>
+        </section>
+
+        <section class="card">
+          <h2>Recommended</h2>
+          <div id="recommendations" class="list"></div>
+        </section>
+
+        <section class="card">
+          <div class="section-title">
+            <h2>Order Status</h2>
+            <button class="button ghost" onclick="requestCancel()">Request Cancel</button>
+          </div>
+          <div id="orders" class="list"></div>
+          <button class="button secondary full" onclick="requestBill()">Request Bill</button>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <script src="/assets/api.js"></script>
+  <script src="/assets/notifications.js"></script>
+  <script src="/assets/customer.js"></script>
+</body>
+</html>

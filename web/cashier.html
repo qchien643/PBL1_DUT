@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cashier Dashboard</title>
+  <link rel="stylesheet" href="/assets/app.css" />
+</head>
+<body>
+  <div id="toast-root" class="toast-root"></div>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Front Desk</p>
+        <h1>Cashier Dashboard</h1>
+        <p class="muted">Open tables, approve orders, process bills.</p>
+      </div>
+      <div class="actions">
+        <button class="button ghost" onclick="loadCashierData()">Refresh</button>
+        <a class="button ghost" href="/">Home</a>
+      </div>
+    </header>
+
+    <section class="dashboard">
+      <section class="card">
+        <div class="section-title">
+          <h2>Table Board</h2>
+          <button class="button primary" onclick="openTable()">Open</button>
+        </div>
+        <div class="actions wrap">
+          <button class="button ghost" onclick="mergeTables()">Merge</button>
+          <button class="button ghost" onclick="transferTable()">Transfer</button>
+          <button class="button ghost" onclick="markCleaned()">Mark Cleaned</button>
+          <button class="button ghost" onclick="resolveKitchenIssue()">Resolve Issue</button>
+        </div>
+        <div id="tables" class="list"></div>
+      </section>
+
+      <section class="card">
+        <h2>Pending Orders</h2>
+        <div id="pending-orders" class="list"></div>
+      </section>
+
+      <section class="card">
+        <h2>Cancel Requests</h2>
+        <div id="cancel-requests" class="list"></div>
+      </section>
+
+      <section class="card">
+        <h2>Open Bills</h2>
+        <div id="open-bills" class="list"></div>
+      </section>
+    </section>
+  </main>
+
+  <script src="/assets/api.js"></script>
+  <script src="/assets/notifications.js"></script>
+  <script src="/assets/cashier.js"></script>
+</body>
+</html>

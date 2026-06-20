@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fulfillment Board</title>
+  <link rel="stylesheet" href="/assets/app.css" />
+</head>
+<body>
+  <div id="toast-root" class="toast-root"></div>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Fulfillment</p>
+        <h1 id="station-title">Kitchen Board</h1>
+        <p class="muted">Accepted orders appear here as preparation tasks.</p>
+      </div>
+      <div class="actions">
+        <button class="button ghost" onclick="loadKitchenData()">Refresh</button>
+        <a class="button ghost" href="/">Home</a>
+      </div>
+    </header>
+
+    <section class="kanban">
+      <section class="card">
+        <h2>Pending</h2>
+        <div id="tasks-pending" class="list"></div>
+      </section>
+      <section class="card">
+        <h2>Preparing</h2>
+        <div id="tasks-preparing" class="list"></div>
+      </section>
+      <section class="card">
+        <h2>Ready</h2>
+        <div id="tasks-ready" class="list"></div>
+      </section>
+      <section class="card">
+        <h2>Issue</h2>
+        <div id="tasks-issue" class="list"></div>
+      </section>
+    </section>
+  </main>
+
+  <script src="/assets/api.js"></script>
+  <script src="/assets/notifications.js"></script>
+  <script src="/assets/kitchen.js"></script>
+</body>
+</html>
