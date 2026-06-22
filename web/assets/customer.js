@@ -8,7 +8,7 @@ const customerState = {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("page-title").textContent = `Table ${customerState.tableCode}`;
+  document.getElementById("page-title").textContent = `Bàn ${customerState.tableCode}`;
   loadCustomerData();
   Notifications.startNotificationPolling(`customer:${customerState.tableCode}`, () => loadCustomerData());
 });
@@ -28,8 +28,8 @@ async function loadCustomerData() {
 
 function renderCustomer() {
   document.getElementById("session-banner").textContent = customerState.session
-    ? `Session #${customerState.session.id} · ${customerState.session.status}`
-    : "This table has not been opened by cashier yet.";
+    ? `Phiên #${customerState.session.id} · ${Api.statusText(customerState.session.status)}`
+    : "Bàn này chưa được thu ngân mở.";
   renderMenu();
   renderCart();
   renderOrders();
@@ -41,12 +41,12 @@ function renderMenu() {
   grid.innerHTML = customerState.menuItems.map((item) => `
     <article class="card">
       <div class="row-title">
-        <span>${Api.escapeHtml(item.name)}</span>
-        <span class="badge status-${item.availabilityStatus}">${item.availabilityStatus}</span>
+        <span>${Api.escapeHtml(Api.itemNameText(item.name))}</span>
+        <span class="badge status-${item.availabilityStatus}">${Api.statusText(item.availabilityStatus)}</span>
       </div>
-      <p class="muted">${Api.escapeHtml(item.category)} · ${Api.formatMoney(item.price)} · ${Api.escapeHtml(item.station)}</p>
+      <p class="muted">${Api.categoryText(item.category)} · ${Api.formatMoney(item.price)} · ${Api.stationText(item.station)}</p>
       <button class="button primary full" ${!customerState.session || item.availabilityStatus !== "AVAILABLE" ? "disabled" : ""}
-        onclick="addToCart(${item.id})">Add</button>
+        onclick="addToCart(${item.id})">Thêm món</button>
     </article>
   `).join("");
 }
@@ -57,19 +57,19 @@ function addToCart(itemId) {
   const existing = customerState.cart.find((line) => line.menuItemId === itemId);
   if (existing) existing.quantity += 1;
   else customerState.cart.push({ menuItemId: itemId, quantity: 1 });
-  Notifications.showToast(`Added ${item.name}`);
+  Notifications.showToast(`Đã thêm ${Api.itemNameText(item.name)}.`);
   renderCart();
 }
 
 function renderCart() {
   const lines = document.getElementById("cart-lines");
   if (!customerState.cart.length) {
-    lines.innerHTML = Api.empty("Cart is empty.");
+    lines.innerHTML = Api.empty("Chưa chọn món nào.");
   } else {
     lines.innerHTML = customerState.cart.map((line) => {
       const item = customerState.menuItems.find((candidate) => candidate.id === line.menuItemId);
       return `<div class="row">
-        <div class="row-title"><span>${Api.escapeHtml(item?.name || "Unknown item")}</span><span>x${line.quantity}</span></div>
+        <div class="row-title"><span>${Api.escapeHtml(Api.itemNameText(item?.name || "Món không xác định"))}</span><span>x${line.quantity}</span></div>
         <div class="row-actions">
           <button class="button ghost" onclick="changeQty(${line.menuItemId}, 1)">+</button>
           <button class="button ghost" onclick="changeQty(${line.menuItemId}, -1)">-</button>
@@ -95,8 +95,8 @@ function changeQty(itemId, delta) {
 }
 
 async function submitOrder() {
-  if (!customerState.session) return Notifications.showToast("Ask cashier to open this table first.");
-  if (!customerState.cart.length) return Notifications.showToast("Cart is empty.");
+  if (!customerState.session) return Notifications.showToast("Vui lòng nhờ thu ngân mở bàn trước.");
+  if (!customerState.cart.length) return Notifications.showToast("Chưa chọn món nào.");
   try {
     await Api.post("/api/orders", {
       tableCode: customerState.tableCode,
@@ -105,7 +105,7 @@ async function submitOrder() {
       idempotencyKey: `${customerState.tableCode}-${Date.now()}`
     });
     customerState.cart = [];
-    Notifications.showToast("Order submitted. Waiting for cashier approval.");
+    Notifications.showToast("Đã gửi đơn món. Vui lòng chờ thu ngân duyệt.");
     await loadCustomerData();
   } catch (error) {
     Notifications.showToast(Api.errorText(error));
@@ -115,23 +115,47 @@ async function submitOrder() {
 function renderOrders() {
   const orders = document.getElementById("orders");
   if (!customerState.orders.length) {
-    orders.innerHTML = Api.empty("No order yet.");
+    orders.innerHTML = Api.empty("Chưa có đơn món.");
     return;
   }
   orders.innerHTML = customerState.orders.map((order) => `
     <div class="row">
-      <div class="row-title"><span>Order #${order.id}</span><span class="badge status-${order.status}">${order.status}</span></div>
+      <div class="row-title"><span>Đơn #${order.id}</span><span class="badge status-${order.status}">${Api.statusText(order.status)}</span></div>
       ${(order.items || []).map((item) => `
-        <p class="muted">Item #${item.id} · ${Api.escapeHtml(item.name)} x${item.quantity} · ${item.status} · ${Api.escapeHtml(item.note || "")} · ${Api.formatMoney(item.lineTotal)}</p>
+        <div class="order-item-line">
+          <p class="muted">Món #${item.id} · ${Api.escapeHtml(Api.itemNameText(item.name))} x${item.quantity} · ${Api.statusText(item.status)}${item.note ? ` · ${Api.escapeHtml(Api.noteText(item.note))}` : ""} · ${Api.formatMoney(item.lineTotal)}</p>
+          ${item.canRequestCancel ? `<button class="button danger small" onclick="requestCancel(${item.id})">Yêu cầu hủy</button>` : ""}
+        </div>
+        ${item.status === "ISSUE_PENDING_DECISION" ? `
+          <div class="notice compact">
+            <strong>Món đang có sự cố.</strong>
+            <p class="muted">Nhân viên sẽ xử lý trước khi lập hóa đơn.</p>
+          </div>
+        ` : ""}
       `).join("")}
       ${order.status === "NEEDS_CUSTOMER_CONFIRMATION" ? `
         <div class="notice">
-          <strong>Some item is sold out.</strong>
-          <p class="muted">Choose how to update this order before cashier sends it to kitchen.</p>
+          <strong>Có món đã hết.</strong>
+          <p class="muted">Vui lòng chọn cách xử lý trước khi thu ngân gửi đơn xuống bếp.</p>
+          <form class="replacement-form" onsubmit="replaceSoldOut(event, ${order.id})">
+            <label class="field">
+              <span>Món thay thế</span>
+              <select name="menuItemId" required>
+                ${customerState.menuItems
+                  .filter((item) => item.availabilityStatus === "AVAILABLE")
+                  .map((item) => `<option value="${item.id}">${Api.escapeHtml(Api.itemNameText(item.name))} · ${Api.formatMoney(item.price)}</option>`)
+                  .join("")}
+              </select>
+            </label>
+            <label class="field compact">
+              <span>Số lượng</span>
+              <input name="quantity" type="number" min="1" value="1" required />
+            </label>
+            <button class="button primary" type="submit">Đổi món</button>
+          </form>
           <div class="row-actions">
-            <button class="button danger" onclick="resolveSoldOut(${order.id}, 'CANCEL_ORDER')">Cancel order</button>
-            <button class="button secondary" onclick="resolveSoldOut(${order.id}, 'REMOVE_UNAVAILABLE')">Remove sold-out</button>
-            <button class="button primary" onclick="replaceSoldOut(${order.id})">Replace item</button>
+            <button class="button danger" onclick="resolveSoldOut(${order.id}, 'CANCEL_ORDER')">Hủy đơn</button>
+            <button class="button secondary" onclick="resolveSoldOut(${order.id}, 'REMOVE_UNAVAILABLE')">Bỏ món đã hết</button>
           </div>
         </div>
       ` : ""}
@@ -142,42 +166,44 @@ function renderOrders() {
 async function resolveSoldOut(orderId, decision, replacements = []) {
   try {
     await Api.post(`/api/orders/${orderId}/customer-decision`, { decision, replacements, actor: "customer" });
-    Notifications.showToast("Order decision saved. Cashier will review again.");
+    Notifications.showToast("Đã lưu lựa chọn. Thu ngân sẽ kiểm tra lại.");
     await loadCustomerData();
   } catch (error) {
     Notifications.showToast(Api.errorText(error));
+    await loadCustomerData();
   }
 }
 
-async function replaceSoldOut(orderId) {
-  const menuItemId = Number(prompt("Replacement menu item id:"));
+async function replaceSoldOut(event, orderId) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const menuItemId = Number(form.get("menuItemId"));
   if (!menuItemId) return;
-  const quantity = Number(prompt("Quantity:", "1")) || 1;
+  const quantity = Number(form.get("quantity")) || 1;
   await resolveSoldOut(orderId, "REPLACE_ITEMS", [{ menuItemId, quantity }]);
 }
 
 function renderRecommendations() {
   const recommendations = document.getElementById("recommendations");
   if (!customerState.recommendations.length) {
-    recommendations.innerHTML = Api.empty("Recommendations appear after table is active.");
+    recommendations.innerHTML = Api.empty("Gợi ý sẽ xuất hiện sau khi bàn được mở.");
     return;
   }
   recommendations.innerHTML = customerState.recommendations.map((item) => `
     <div class="row">
-      <div class="row-title"><span>${Api.escapeHtml(item.name)}</span><span>${item.matchPercent}% match</span></div>
-      <p class="muted">${Api.formatMoney(item.price)} · ${Api.escapeHtml(item.reason)}</p>
-      <button class="button secondary full" onclick="addToCart(${item.menuItemId})">Add suggestion</button>
+      <div class="row-title"><span>${Api.escapeHtml(Api.itemNameText(item.name))}</span><span>Phù hợp ${item.matchPercent}%</span></div>
+      <p class="muted">${Api.formatMoney(item.price)} · Phù hợp với các món của bàn</p>
+      <button class="button secondary full" onclick="addToCart(${item.menuItemId})">Thêm món gợi ý</button>
     </div>
   `).join("");
 }
 
-async function requestCancel() {
+async function requestCancel(orderItemId) {
   if (!customerState.session) return;
-  const orderItemId = Number(prompt("Order item id to cancel:"));
   if (!orderItemId) return;
   try {
     await Api.post(`/api/order-items/${orderItemId}/cancel-request`, { sessionId: customerState.session.id });
-    Notifications.showToast("Cancel request sent to cashier.");
+    Notifications.showToast("Đã gửi yêu cầu hủy món cho thu ngân.");
     await loadCustomerData();
   } catch (error) {
     Notifications.showToast(Api.errorText(error));
@@ -185,10 +211,10 @@ async function requestCancel() {
 }
 
 async function requestBill() {
-  if (!customerState.session) return Notifications.showToast("No active session.");
+  if (!customerState.session) return Notifications.showToast("Bàn chưa được mở.");
   try {
     const bill = await Api.post(`/api/sessions/${customerState.session.id}/bill`, { actor: "customer" });
-    Notifications.showToast(`Bill requested: ${Api.formatMoney(bill.total)}`);
+    Notifications.showToast(`Đã yêu cầu thanh toán: ${Api.formatMoney(bill.total)}.`);
     await loadCustomerData();
   } catch (error) {
     Notifications.showToast(Api.errorText(error));

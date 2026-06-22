@@ -4,6 +4,7 @@
 #include "json_helpers.hpp"
 #include "simple_http_server.hpp"
 #include "../infrastructure/file_database.hpp"
+#include "../policies/business_policies.hpp"
 #include "../modules/kitchen_fulfillment/kitchen_fulfillment_service.hpp"
 #include "../modules/menu_inventory/menu_inventory_service.hpp"
 #include "../modules/order_management/order_management_service.hpp"
@@ -180,6 +181,9 @@ private:
             const std::string station = queryValue(request, "station", "kitchen");
             return success("{\"tasks\":" + kitchenTasksJson(station) + "}");
         }
+        if (request.method == "GET" && parts.size() == 4 && parts[1] == "kitchen" && parts[2] == "issues" && parts[3] == "open") {
+            return success("{\"issues\":" + openKitchenIssuesJson() + "}");
+        }
         if (request.method == "GET" && parts.size() == 3 && parts[1] == "bills" && parts[2] == "open") {
             return success("{\"bills\":" + openBillsJson() + "}");
         }
@@ -349,6 +353,10 @@ private:
                 json += ",";
             }
             first = false;
+            const bool hasNoCharge = orderItem.status == "REJECTED" ||
+                                     orderItem.status == "CANCELLED" ||
+                                     orderItem.status == "CANCEL_REQUESTED" ||
+                                     orderItem.status == "ISSUE_PENDING_DECISION";
             json += "{\"id\":" + std::to_string(orderItem.id) +
                     ",\"menuItemId\":" + std::to_string(orderItem.menuItemId) +
                     ",\"name\":" + jsonString(item == nullptr ? "Unknown item" : item->name) +
@@ -357,7 +365,8 @@ private:
                     ",\"status\":" + jsonString(orderItem.status) +
                     ",\"note\":" + jsonString(orderItem.note) +
                     ",\"availabilityStatus\":" + jsonString(item == nullptr ? "UNKNOWN" : item->availabilityStatus) +
-                    ",\"lineTotal\":" + std::to_string(orderItem.quantity * orderItem.unitPrice) + "}";
+                    ",\"canRequestCancel\":" + std::string(policy::canRequestCancel(orderItem) ? "true" : "false") +
+                    ",\"lineTotal\":" + std::to_string(hasNoCharge ? 0 : orderItem.quantity * orderItem.unitPrice) + "}";
         }
         json += "]";
         return json;
@@ -462,6 +471,36 @@ private:
         return json;
     }
 
+    std::string openKitchenIssuesJson() {
+        std::string json = "[";
+        bool first = true;
+        for (const KitchenIssueRecord &issue : database.kitchenIssues) {
+            if (issue.status != "OPEN") {
+                continue;
+            }
+            KitchenTaskRecord *task = database.findKitchenTaskById(issue.taskId);
+            OrderItemRecord *orderItem = database.findOrderItemById(issue.orderItemId);
+            MenuItemRecord *menuItem = orderItem == nullptr ? nullptr : database.findMenuItemById(orderItem->menuItemId);
+            OrderRecord *order = orderItem == nullptr ? nullptr : database.findOrderById(orderItem->orderId);
+            SessionRecord *session = order == nullptr ? nullptr : database.findSessionById(order->sessionId);
+            if (!first) {
+                json += ",";
+            }
+            first = false;
+            json += "{\"id\":" + std::to_string(issue.id) +
+                    ",\"taskId\":" + std::to_string(issue.taskId) +
+                    ",\"orderItemId\":" + std::to_string(issue.orderItemId) +
+                    ",\"station\":" + jsonString(task == nullptr ? "" : task->station) +
+                    ",\"status\":" + jsonString(issue.status) +
+                    ",\"reason\":" + jsonString(issue.reason) +
+                    ",\"itemName\":" + jsonString(menuItem == nullptr ? "Unknown item" : menuItem->name) +
+                    ",\"quantity\":" + std::to_string(orderItem == nullptr ? 0 : orderItem->quantity) +
+                    ",\"tableCodes\":" + (session == nullptr ? "[]" : tableCodesJson(*session)) + "}";
+        }
+        json += "]";
+        return json;
+    }
+
     std::string openBillsJson() {
         std::string json = "[";
         bool first = true;
@@ -527,6 +566,16 @@ private:
         return json;
     }
 
+    int latestNotificationId(const std::string &channel) const {
+        int latestId = 0;
+        for (const NotificationRecord &notification : database.notifications) {
+            if (notification.channel == channel) {
+                latestId = std::max(latestId, notification.id);
+            }
+        }
+        return latestId;
+    }
+
     HttpResponse tableSessionResponse(const std::string &tableCode) {
         SessionRecord *session = database.findActiveSessionByTableCode(tableCode);
         if (session == nullptr) {
@@ -567,7 +616,8 @@ private:
         if (channel.empty()) {
             return failure("INVALID_CHANNEL", "Notification channel is required.");
         }
-        return success("{\"events\":" + notificationsJson(database.notificationsAfter(channel, afterId, limit <= 0 ? 50 : limit)) + "}");
+        return success("{\"events\":" + notificationsJson(database.notificationsAfter(channel, afterId, limit <= 0 ? 50 : limit)) +
+                       ",\"latestId\":" + std::to_string(latestNotificationId(channel)) + "}");
     }
 
     HttpResponse reportsSummaryResponse() {
@@ -736,18 +786,39 @@ private:
         OrderItemRecord *item = database.findOrderItemById(orderItemId);
         OrderRecord *order = item == nullptr ? nullptr : database.findOrderById(item->orderId);
         const int sessionId = order == nullptr ? 0 : order->sessionId;
+        KitchenTaskRecord *taskBefore = database.findKitchenTaskByOrderItemId(orderItemId);
+        const int taskId = taskBefore == nullptr ? 0 : taskBefore->id;
+        const std::string station = taskBefore == nullptr ? "" : taskBefore->station;
+        MenuItemRecord *menuItem = item == nullptr ? nullptr : database.findMenuItemById(item->menuItemId);
+        const std::string itemName = menuItem == nullptr ? "Item" : menuItem->name;
         const OperationResult result = order_management::approveCancel(database, orderItemId, "cashier");
         if (!result.ok) {
             return failure(result);
         }
         notifySessionCustomers(sessionId, "CANCEL_APPROVED", "Cancel request for item #" + std::to_string(orderItemId) + " was approved.", "order_item", orderItemId);
+        database.addNotification("cashier", "ORDER_ITEM_CANCELLED", "Cancelled " + itemName + ".", "order_item", orderItemId);
+        if (!station.empty()) {
+            database.addNotification(station, "ORDER_ITEM_CANCELLED", "Cancelled " + itemName + ". Remove task #" + std::to_string(taskId) + ".", "order_item", orderItemId);
+        }
         database.save();
         return operationResponse(result, "CANCEL_APPROVE_FAILED");
     }
 
     HttpResponse startTaskResponse(int taskId, const std::string &body) {
         const std::string station = extractJsonString(body, "station", "kitchen");
-        return operationResponse(kitchen_fulfillment::startTask(database, taskId, station, station), "TASK_START_FAILED");
+        KitchenTaskRecord *taskBefore = database.findKitchenTaskById(taskId);
+        OrderItemRecord *item = taskBefore == nullptr ? nullptr : database.findOrderItemById(taskBefore->orderItemId);
+        OrderRecord *order = item == nullptr ? nullptr : database.findOrderById(item->orderId);
+        const int sessionId = order == nullptr ? 0 : order->sessionId;
+        const OperationResult result = kitchen_fulfillment::startTask(database, taskId, station, station);
+        if (!result.ok) {
+            return failure(result);
+        }
+        database.addNotification(station, "TASK_STARTED", "Task #" + std::to_string(taskId) + " was started.", "kitchen_task", taskId);
+        database.addNotification("cashier", "TASK_STARTED", station + " started task #" + std::to_string(taskId) + ".", "kitchen_task", taskId);
+        notifySessionCustomers(sessionId, "TASK_STARTED", "An item from your order is now being prepared.", "kitchen_task", taskId);
+        database.save();
+        return operationResponse(result, "TASK_START_FAILED");
     }
 
     HttpResponse readyTaskResponse(int taskId, const std::string &body) {
@@ -767,6 +838,7 @@ private:
         if (!result.ok) {
             return failure(result);
         }
+        database.addNotification(station, "TASK_READY", "Task #" + std::to_string(taskId) + " is ready.", "kitchen_task", taskId);
         database.addNotification("cashier", "TASK_READY", station + " marked task #" + std::to_string(taskId) + " ready.", "kitchen_task", taskId);
         notifySessionCustomers(sessionId, "TASK_READY", "An item from your order is ready.", "kitchen_task", taskId);
         database.save();
@@ -783,6 +855,9 @@ private:
         const OperationResult result = kitchen_fulfillment::markServed(database, taskId, actor);
         if (!result.ok) {
             return failure(result);
+        }
+        if (taskBefore != nullptr) {
+            database.addNotification(taskBefore->station, "TASK_SERVED", "Task #" + std::to_string(taskId) + " was served.", "kitchen_task", taskId);
         }
         database.addNotification("cashier", "TASK_SERVED", "Task #" + std::to_string(taskId) + " was served.", "kitchen_task", taskId);
         notifySessionCustomers(sessionId, "TASK_SERVED", "An item was served to your table.", "kitchen_task", taskId);
@@ -802,6 +877,7 @@ private:
         if (!result.ok) {
             return failure(result);
         }
+        database.addNotification(station, "KITCHEN_ISSUE", "Issue reported for task #" + std::to_string(taskId) + ".", "kitchen_issue", result.id);
         database.addNotification("cashier", "KITCHEN_ISSUE", "Kitchen issue on task #" + std::to_string(taskId) + ": " + reason, "kitchen_issue", result.id);
         database.addNotification("manager", "KITCHEN_ISSUE", "Kitchen issue requires resolution.", "kitchen_issue", result.id);
         notifySessionCustomers(sessionId, "KITCHEN_ISSUE", "A kitchen issue affected one item. Staff will resolve it.", "kitchen_issue", result.id);
@@ -813,6 +889,8 @@ private:
         const std::string actor = extractJsonString(body, "actor", "cashier");
         const std::string resolution = extractJsonString(body, "resolution");
         KitchenIssueRecord *issueBefore = database.findKitchenIssueById(issueId);
+        KitchenTaskRecord *taskBefore = issueBefore == nullptr ? nullptr : database.findKitchenTaskById(issueBefore->taskId);
+        const std::string station = taskBefore == nullptr ? "" : taskBefore->station;
         OrderRecord *order = nullptr;
         if (issueBefore != nullptr) {
             OrderItemRecord *item = database.findOrderItemById(issueBefore->orderItemId);
@@ -825,6 +903,9 @@ private:
             return failure(result);
         }
         database.addNotification("cashier", "KITCHEN_ISSUE_RESOLVED", "Kitchen issue #" + std::to_string(issueId) + " was resolved.", "kitchen_issue", issueId);
+        if (!station.empty()) {
+            database.addNotification(station, "KITCHEN_ISSUE_RESOLVED", "Kitchen issue #" + std::to_string(issueId) + " was resolved.", "kitchen_issue", issueId);
+        }
         notifySessionCustomers(sessionId, "KITCHEN_ISSUE_RESOLVED", "A kitchen issue was resolved.", "kitchen_issue", issueId);
         database.save();
         return operationResponse(result, "KITCHEN_ISSUE_RESOLVE_FAILED");

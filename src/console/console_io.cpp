@@ -34,7 +34,7 @@ void printHelp() {
     std::cout << "  restaurant_mvp server [port]\n";
     std::cout << "  restaurant_mvp test\n";
     std::cout << "  restaurant_mvp reset\n\n";
-    std::cout << "Data file: data/restaurant_db.txt\n";
+    std::cout << "Data directory: data/db/\n";
 }
 
 }

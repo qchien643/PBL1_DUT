@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="vi">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Fulfillment Board</title>
+  <title>Bếp và quầy nước</title>
   <link rel="stylesheet" href="/assets/app.css" />
 </head>
 <body>
@@ -11,31 +11,31 @@
   <main class="shell">
     <header class="topbar">
       <div>
-        <p class="eyebrow">Fulfillment</p>
-        <h1 id="station-title">Kitchen Board</h1>
-        <p class="muted">Accepted orders appear here as preparation tasks.</p>
+        <p class="eyebrow">Khu chuẩn bị món</p>
+        <h1 id="station-title">Bếp</h1>
+        <p class="muted">Các món đã được thu ngân duyệt sẽ xuất hiện tại đây.</p>
       </div>
       <div class="actions">
-        <button class="button ghost" onclick="loadKitchenData()">Refresh</button>
-        <a class="button ghost" href="/">Home</a>
+        <button class="button ghost" onclick="loadKitchenData()">Tải lại</button>
+        <a class="button ghost" href="/">Trang chính</a>
       </div>
     </header>
 
     <section class="kanban">
       <section class="card">
-        <h2>Pending</h2>
+        <h2>Chờ làm</h2>
         <div id="tasks-pending" class="list"></div>
       </section>
       <section class="card">
-        <h2>Preparing</h2>
+        <h2>Đang làm</h2>
         <div id="tasks-preparing" class="list"></div>
       </section>
       <section class="card">
-        <h2>Ready</h2>
+        <h2>Sẵn sàng</h2>
         <div id="tasks-ready" class="list"></div>
       </section>
       <section class="card">
-        <h2>Issue</h2>
+        <h2>Có sự cố</h2>
         <div id="tasks-issue" class="list"></div>
       </section>
     </section>

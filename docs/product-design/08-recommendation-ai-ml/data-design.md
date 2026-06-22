@@ -12,6 +12,31 @@
 | `recommendation_events` | Shown/click/add | `sessionId`, `itemId`, `eventType`, `strategy` |
 | `item_pair_rules` | Fallback ăn kèm | `sourceItemId`, `targetItemId`, `weight` |
 
+## Interaction fields
+
+`recommendation_interactions.weight` nên được tính từ order history bằng công thức:
+
+```text
+weight = log(1 + quantity) * statusWeight * recencyDecay + eventWeight
+```
+
+| Field | Nguồn dữ liệu | Cách dùng |
+| --- | --- | --- |
+| `quantity` | `order_items.quantity` | Món gọi nhiều hơn tạo tín hiệu mạnh hơn nhưng dùng log để không áp đảo |
+| `statusWeight` | `order_items.status` | `READY/SERVED = 1`, `CANCELLED/REJECTED/ISSUE_PENDING_DECISION = 0` |
+| `recencyDecay` | thời điểm order/bill | Đơn gần đây ảnh hưởng mạnh hơn đơn quá cũ |
+| `eventWeight` | `recommendation_events` | Bấm hoặc thêm món gợi ý tạo tín hiệu bổ sung |
+| `source` | `ORDER`, `RECOMMENDATION_ADD`, `RECOMMENDATION_CLICK` | Biết tương tác đến từ order thật hay phản hồi gợi ý |
+
+Các bảng có thể bổ sung sau MVP:
+
+| Table | Key fields | Lý do |
+| --- | --- | --- |
+| `ingredient_stock` | `ingredientId`, `stockQty`, `expiresAt` | Tăng điểm món cần đẩy tồn kho |
+| `menu_item_costs` | `itemId`, `cost`, `margin` | Ưu tiên món có biên lợi nhuận tốt |
+| `station_load_snapshots` | `station`, `pendingCount`, `avgPrepDelay` | Giảm điểm món làm lâu khi bếp/quầy quá tải |
+| `manual_combo_rules` | `sourceItemId`, `targetItemId`, `priority` | Cho quản lý cấu hình combo thủ công |
+
 ## Indexes
 
 | Table | Index |

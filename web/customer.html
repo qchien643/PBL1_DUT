@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="vi">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Customer Table</title>
+  <title>Màn hình khách</title>
   <link rel="stylesheet" href="/assets/app.css" />
 </head>
 <body>
@@ -11,18 +11,18 @@
   <main class="shell">
     <header class="topbar">
       <div>
-        <p class="eyebrow">Customer Screen</p>
-        <h1 id="page-title">Table</h1>
-        <p id="session-banner" class="muted">Loading session...</p>
+        <p class="eyebrow">Màn hình khách</p>
+        <h1 id="page-title">Bàn</h1>
+        <p id="session-banner" class="muted">Đang tải thông tin bàn...</p>
       </div>
-      <a class="button ghost" href="/">Home</a>
+      <a class="button ghost" href="/">Trang chính</a>
     </header>
 
     <section class="layout two">
       <section>
         <div class="section-title">
-          <h2>Menu</h2>
-          <button class="button ghost" onclick="loadCustomerData()">Refresh</button>
+          <h2>Thực đơn</h2>
+          <button class="button ghost" onclick="loadCustomerData()">Tải lại</button>
         </div>
         <div id="menu-grid" class="grid menu-grid"></div>
       </section>
@@ -30,25 +30,24 @@
       <aside class="stack">
         <section class="card">
           <div class="section-title">
-            <h2>Cart</h2>
-            <span id="cart-total" class="badge">0 VND</span>
+            <h2>Món đã chọn</h2>
+            <span id="cart-total" class="badge">0 đ</span>
           </div>
           <div id="cart-lines" class="list"></div>
-          <button class="button primary full" onclick="submitOrder()">Submit Order</button>
+          <button class="button primary full" onclick="submitOrder()">Gửi đơn món</button>
         </section>
 
         <section class="card">
-          <h2>Recommended</h2>
+          <h2>Gợi ý thêm</h2>
           <div id="recommendations" class="list"></div>
         </section>
 
         <section class="card">
           <div class="section-title">
-            <h2>Order Status</h2>
-            <button class="button ghost" onclick="requestCancel()">Request Cancel</button>
+            <h2>Trạng thái món</h2>
           </div>
           <div id="orders" class="list"></div>
-          <button class="button secondary full" onclick="requestBill()">Request Bill</button>
+          <button class="button secondary full" onclick="requestBill()">Yêu cầu thanh toán</button>
         </section>
       </aside>
     </section>

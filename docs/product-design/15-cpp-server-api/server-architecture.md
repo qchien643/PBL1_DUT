@@ -80,7 +80,7 @@ flowchart TD
 | `src/domain/` | Giữ nguyên record/entity |
 | `src/policies/` | Giữ nguyên business rule |
 | `src/modules/` | Giữ nguyên application service, có thể bổ sung DTO |
-| `src/infrastructure/` | Tạm giữ file database, sau có thể đổi SQLite |
+| `src/infrastructure/` | Tạm giữ table-per-file `.txt` storage, sau có thể đổi SQLite |
 | `src/console/` | Giữ làm debug CLI |
 | `src/server/` | Thêm HTTP router/controller |
 | `web/` | Static frontend files |
@@ -123,7 +123,7 @@ Trong giai đoạn đầu, server là một process duy nhất nên giảm nhi�
 MVP có thể dùng:
 
 - In-memory mutex khi đọc/ghi database.
-- Save file sau mỗi command.
+- Save các table file bị thay đổi sau mỗi command.
 - Notification append vào database.
 
 Nếu nâng cấp SQLite:

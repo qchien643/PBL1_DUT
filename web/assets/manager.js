@@ -31,13 +31,13 @@ function renderManagerMenu() {
   root.innerHTML = managerState.menuItems.map((item) => `
     <div class="row">
       <div class="row-title">
-        <span>${Api.escapeHtml(item.name)}</span>
-        <span class="badge status-${item.availabilityStatus}">${item.availabilityStatus}</span>
+        <span>${Api.escapeHtml(Api.itemNameText(item.name))}</span>
+        <span class="badge status-${item.availabilityStatus}">${Api.statusText(item.availabilityStatus)}</span>
       </div>
-      <p class="muted">${Api.escapeHtml(item.category)} · ${Api.formatMoney(item.price)}</p>
+      <p class="muted">${Api.categoryText(item.category)} · ${Api.formatMoney(item.price)}</p>
       <button class="button ${item.availabilityStatus === "AVAILABLE" ? "danger" : "primary"} full"
         onclick="setAvailability(${item.id}, '${item.availabilityStatus === "AVAILABLE" ? "SOLD_OUT" : "AVAILABLE"}')">
-        Mark ${item.availabilityStatus === "AVAILABLE" ? "sold out" : "available"}
+        ${item.availabilityStatus === "AVAILABLE" ? "Báo hết món" : "Mở bán lại"}
       </button>
     </div>
   `).join("");
@@ -46,22 +46,22 @@ function renderManagerMenu() {
 function renderSummary() {
   const summary = managerState.summary || {};
   document.getElementById("summary").innerHTML = `
-    <div class="metric"><span>Paid revenue</span><strong>${Api.formatMoney(summary.paidRevenue)}</strong></div>
-    <div class="metric"><span>Orders</span><strong>${summary.orderCount || 0}</strong></div>
-    <div class="metric"><span>Tables</span><strong>${summary.tableCount || 0}</strong></div>
+    <div class="metric"><span>Doanh thu đã thanh toán</span><strong>${Api.formatMoney(summary.paidRevenue)}</strong></div>
+    <div class="metric"><span>Đơn món</span><strong>${summary.orderCount || 0}</strong></div>
+    <div class="metric"><span>Bàn</span><strong>${summary.tableCount || 0}</strong></div>
   `;
 }
 
 function renderAudit() {
   const root = document.getElementById("audit-log");
   if (!managerState.auditEvents.length) {
-    root.innerHTML = Api.empty("No audit event.");
+    root.innerHTML = Api.empty("Chưa có nhật ký thao tác.");
     return;
   }
   root.innerHTML = managerState.auditEvents.map((event) => `
     <div class="row">
-      <div class="row-title"><span>#${event.id} ${Api.escapeHtml(event.role)}</span><span>${Api.escapeHtml(event.createdAt)}</span></div>
-      <p class="muted">${Api.escapeHtml(event.message)}</p>
+      <div class="row-title"><span>#${event.id} ${Api.roleText(event.role)}</span><span>${Api.escapeHtml(event.createdAt)}</span></div>
+      <p class="muted">${Api.auditText(event)}</p>
     </div>
   `).join("");
 }
@@ -69,7 +69,7 @@ function renderAudit() {
 async function setAvailability(itemId, availabilityStatus) {
   try {
     await Api.patch(`/api/menu/${itemId}/availability`, { availabilityStatus, actor: "manager" });
-    Notifications.showToast("Menu availability updated.");
+    Notifications.showToast("Đã cập nhật tình trạng món.");
     await loadManagerData();
   } catch (error) {
     Notifications.showToast(Api.errorText(error));

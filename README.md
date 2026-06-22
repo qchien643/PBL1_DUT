@@ -1,12 +1,12 @@
 # Casual Dining Ordering MVP
 
-Ứng dụng MVP cho đồ án: hệ thống đặt món tại bàn cho nhà hàng **casual dining**, chạy bằng nhiều cửa sổ CMD và cùng đọc/ghi một file dữ liệu chung.
+Ứng dụng MVP cho đồ án: hệ thống đặt món tại bàn cho nhà hàng **casual dining**, chạy bằng Web UI hoặc nhiều cửa sổ CMD và cùng đọc/ghi dữ liệu trong `data/db/`.
 
 ## Công nghệ
 
 - C++17
 - CMake
-- Lưu trữ MVP bằng file `data/restaurant_db.txt`
+- Lưu trữ MVP bằng nhiều file `.txt` theo bảng trong `data/db/`
 - Không dùng thư viện ngoài để dễ nộp và chạy trên máy học phần
 
 ## Build
@@ -32,30 +32,30 @@ Nếu dùng Visual Studio generator, file có thể nằm tại:
 
 ## Chạy nhiều cửa sổ CMD
 
-Mỗi vai trò mở một cửa sổ riêng nhưng dùng chung `data/restaurant_db.txt`.
+Mỗi vai trò mở một cửa sổ riêng nhưng dùng chung các table file trong `data/db/`.
 
 ### Cách dễ nhất bằng script
 
 ```bat
-scripts\build.bat
-scripts\reset.bat
-scripts\cashier.bat
-scripts\customer_T01.bat
-scripts\kitchen.bat
-scripts\bar.bat
-scripts\manager.bat
+scripts\build\build.bat
+scripts\maintenance\reset_data.bat
+scripts\demo\start_console_demo.bat
 ```
 
-Mở toàn bộ cửa sổ trong một lần:
+Chạy từng vai trò:
 
 ```bat
-scripts\start_all.bat
+scripts\run\run_cashier.bat
+scripts\run\run_customer_T01.bat
+scripts\run\run_kitchen.bat
+scripts\run\run_bar.bat
+scripts\run\run_manager.bat
 ```
 
 Đóng toàn bộ cửa sổ app và reset dữ liệu về seed ban đầu:
 
 ```bat
-scripts\stop_and_reset.bat
+scripts\maintenance\stop_and_reset.bat
 ```
 
 ## Chạy Web UI + C++ Server
@@ -63,13 +63,13 @@ scripts\stop_and_reset.bat
 Khởi động server và mở toàn bộ màn hình browser:
 
 ```bat
-scripts\start_web_demo.bat
+scripts\demo\start_web_demo.bat
 ```
 
 Hoặc chạy server thủ công:
 
 ```bat
-scripts\server.bat
+scripts\run\run_server.bat
 ```
 
 Sau đó mở:
@@ -111,6 +111,8 @@ Nếu dùng MinGW:
 .\build\restaurant_mvp.exe cashier
 ```
 
+Xem chi tiết toàn bộ script tại `scripts/README.md`. Script được chia theo nhóm trong `scripts/build/`, `scripts/run/`, `scripts/demo/`, `scripts/maintenance/` và `scripts/legacy/`.
+
 ## Luồng demo nhanh
 
 1. `cashier` mở bàn `T01`.
@@ -127,6 +129,12 @@ Chạy bộ scenario test nội bộ không cần thư viện ngoài:
 
 ```powershell
 .\build-mingw\restaurant_mvp.exe test
+```
+
+Hoặc dùng script:
+
+```bat
+scripts\build\test.bat
 ```
 
 Bộ test hiện kiểm tra: idempotency khi submit, sold-out yêu cầu khách xác nhận, replacement rồi accept lại, kitchen issue chặn bill, resolve issue, bill stale, payment thiếu tiền và permission tối thiểu.
@@ -152,7 +160,7 @@ Bộ test hiện kiểm tra: idempotency khi submit, sold-out yêu cầu khách 
 src/
   domain/                 # Entity/record dùng chung
   shared/                 # Utility chung
-  infrastructure/         # FileDatabase, persistence
+  infrastructure/         # Table-per-file storage, FileDatabase facade
   policies/               # Business rule/policy dùng để quyết định nghiệp vụ
   modules/
     table_session/        # Mở bàn, ghép bàn, chuyển bàn
@@ -171,6 +179,6 @@ Xem thêm mapping giữa tài liệu thiết kế và code tại `docs/product-d
 
 ## Ghi chú đồng bộ CMD
 
-Mỗi vòng thao tác sẽ đọc lại `data/restaurant_db.txt`, sau đó ghi lại khi có thay đổi. Vì vậy nhiều cửa sổ CMD có thể nhìn thấy trạng thái mới nhất sau khi chọn lại menu/chức năng.
+Mỗi vòng thao tác sẽ đọc lại các table file trong `data/db/`, sau đó ghi lại file bảng bị thay đổi. Vì vậy nhiều cửa sổ CMD có thể nhìn thấy trạng thái mới nhất sau khi chọn lại menu/chức năng.
 
 Đây là cơ chế phù hợp cho MVP đồ án. Nếu nâng cấp thành sản phẩm thật, nên thay bằng SQLite/PostgreSQL và transaction/locking chuẩn.

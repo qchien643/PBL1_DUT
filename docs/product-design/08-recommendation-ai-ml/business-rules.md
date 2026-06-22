@@ -9,6 +9,8 @@
 | RECO_005 | Model chỉ train từ session paid/served | `RecommendationPolicy` | Required |
 | RECO_006 | Recommendation không tự thêm món vào cart | N/A | Required |
 | RECO_007 | Kết quả phải có `strategy` và `reason` | `RecommendationPolicy` | Recommended |
+| RECO_008 | Món `CANCELLED`, `REJECTED`, `ISSUE_PENDING_DECISION` không được dùng làm tín hiệu thích món | `RecommendationTrainingPolicy` | Required |
+| RECO_009 | Điểm đề xuất phải kết hợp model score với filter nghiệp vụ | `RecommendationFilterPolicy` | Required |
 
 ## Strategy priority
 
@@ -18,6 +20,14 @@
 | 2 | Item pair rule |
 | 3 | Best seller |
 | 4 | Category fallback |
+
+## Mathematical policy notes
+
+- Interaction weight dùng `log(1 + quantity)` để số lượng lớn không làm lệch model.
+- Chỉ train từ món đã phục vụ hoặc đủ điều kiện tính tiền.
+- `availabilityStatus = SOLD_OUT` luôn bị filter sau cùng, dù model score cao.
+- Session đã `BILL_REQUESTED` hoặc `CLOSED` không được recommend thêm món.
+- Fallback phải hoạt động khi chưa đủ dữ liệu latent factor.
 
 ## Policy contracts
 

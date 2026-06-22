@@ -12,9 +12,14 @@
 
 | Formula | Meaning |
 | --- | --- |
-| `R[session][item] = 1 + log(1 + quantity)` | Interaction weight |
-| `currentSessionVector = average(cart item vectors)` | Vector cho session active |
-| `score = dot(sessionVector, itemVector) + itemBias + boosts` | Hybrid score |
+| `r_si = log(1 + q_si) * w_status * decay(t_s) + w_event` | Trọng số tương tác giữa phiên `s` và món `i` |
+| `p_si = 1 if r_si > 0 else 0` | Tín hiệu implicit feedback |
+| `c_si = 1 + alpha * r_si` | Độ tin cậy của tương tác |
+| `score_lf(s,i) = mu + b_s + b_i + dot(x_s, y_i)` | Điểm latent factor |
+| `x_current = normalize(sum_i a_i * y_i / sum_i a_i)` | Vector cho phiên đang ngồi |
+| `score = w_lf*latent + w_pop*popular + w_pair*pair + w_cat*category + w_time*time - w_prep*prep` | Điểm hybrid cuối cùng |
+
+Xem giải thích biến, hàm mất mát và fallback tại [algorithm-design.md](algorithm-design.md).
 
 ## Policy-aware service flow
 

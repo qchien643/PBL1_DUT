@@ -9,6 +9,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_executable(restaurant_mvp
     src/main.cpp
     src/shared/utils.cpp
+    src/infrastructure/storage/row_codec.cpp
+    src/infrastructure/storage/file_table_store.cpp
     src/infrastructure/file_database.cpp
     src/policies/business_policies.cpp
     src/modules/table_session/table_session_service.cpp

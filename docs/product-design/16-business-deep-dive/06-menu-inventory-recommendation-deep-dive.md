@@ -44,6 +44,28 @@ Candidate items
 → fallback best-seller/category
 ```
 
+Thiết kế thuật toán chi tiết nằm ở `../08-recommendation-ai-ml/algorithm-design.md`. Công thức tổng quan:
+
+```text
+score(j) =
+    w_lf   * dot(x_current, y_j)
+  + w_pop  * popularity(j)
+  + w_pair * pair_score(C, j)
+  + w_cat  * category_boost(C, j)
+  + w_time * time_boost(j, now)
+  - w_prep * prep_penalty(j)
+```
+
+Trong đó `C` là các món khách đã chọn/gọi trong phiên hiện tại. `x_current` là vector khẩu vị suy ra từ `C`, còn `y_j` là vector ẩn của món ứng viên `j`. Các thành phần `popularity`, `pair_score`, `category_boost`, `time_boost` giúp mô hình phản ứng với dữ liệu thật của nhà hàng như món bán chạy, món thường đi kèm, nhóm món còn thiếu, thời điểm bán tốt và thời gian chuẩn bị.
+
+Vì MVP không có tài khoản khách hàng và không có đánh giá sao, hệ thống dùng implicit feedback:
+
+```text
+r_si = log(1 + quantity) * statusWeight * recencyDecay + eventWeight
+```
+
+Món đã phục vụ tạo tín hiệu tích cực. Món `CANCELLED`, `REJECTED`, `ISSUE_PENDING_DECISION` không được xem là khách thích món đó.
+
 ## 5. Recommendation Edge Cases
 
 | Edge case | Tình huống | Xử lý |

@@ -9,7 +9,7 @@ flowchart TD
     CMD[Console Adapter<br/>manager/cashier/customer/kitchen]
     SERVICE[Module Service<br/>table/menu/order/kitchen/payment/recommendation/reporting]
     POLICY[Business Policies<br/>rule decision]
-    DB[FileDatabase<br/>shared data file]
+    DB[FileDatabase facade<br/>table-per-file txt storage]
     MODEL[Domain Models<br/>records/status]
 
     CMD --> SERVICE
@@ -30,7 +30,7 @@ flowchart TD
 | `07-payment-billing` | `src/modules/payment_billing/` | Tính bill, loại món hủy, xác nhận thanh toán |
 | `08-recommendation-ai-ml` | `src/modules/recommendation_ai_ml/` | Recommendation latent-factor MVP |
 | `11-reporting-audit` | `src/modules/reporting_audit/` | Doanh thu đã thanh toán, audit log |
-| `12-database-design` | `src/infrastructure/file_database.*` | Persistence MVP bằng file dùng chung |
+| `12-database-design` | `src/infrastructure/storage/`, `src/infrastructure/file_database.*` | Persistence MVP bằng nhiều `.txt` theo bảng |
 
 ## Policy Mapping
 

@@ -68,6 +68,7 @@ OperationResult evaluateCreateBill(const FileDatabase &database, const SessionRe
 
     std::string blockers = "[";
     bool hasBlocker = false;
+    bool hasSessionOrder = false;
     auto addBlocker = [&](const std::string &type, int id, const std::string &status) {
         if (hasBlocker) {
             blockers += ",";
@@ -80,6 +81,7 @@ OperationResult evaluateCreateBill(const FileDatabase &database, const SessionRe
         if (order.sessionId != session.id) {
             continue;
         }
+        hasSessionOrder = true;
         if (order.status == "SUBMITTED" || order.status == "NEEDS_CUSTOMER_CONFIRMATION") {
             addBlocker("order", order.id, order.status);
         }
@@ -88,20 +90,24 @@ OperationResult evaluateCreateBill(const FileDatabase &database, const SessionRe
             if (item.orderId != order.id) {
                 continue;
             }
-            if (item.status == "SUBMITTED" || item.status == "NEEDS_CUSTOMER_CONFIRMATION" ||
-                item.status == "CANCEL_REQUESTED" || item.status == "ACCEPTED" ||
-                item.status == "PREPARING" || item.status == "ISSUE_PENDING_DECISION") {
-                addBlocker("order_item", item.id, item.status);
+            if (item.status == "REJECTED" || item.status == "CANCELLED") {
+                continue;
             }
 
             const KitchenTaskRecord *task = nullptr;
             for (const KitchenTaskRecord &candidate : database.kitchenTasks) {
-                if (candidate.orderItemId == item.id) {
+                if (candidate.orderItemId == item.id && candidate.status != "CANCELLED") {
                     task = &candidate;
-                    break;
                 }
             }
-            if (task != nullptr && (task->status == "PENDING" || task->status == "PREPARING" || task->status == "ISSUE")) {
+
+            const bool itemIsReadyForBill = item.status == "READY" || item.status == "SERVED";
+            if (!itemIsReadyForBill) {
+                addBlocker("order_item", item.id, item.status);
+            }
+            if (task == nullptr) {
+                addBlocker("kitchen_task", item.id, "MISSING");
+            } else if (task->status != "READY" && task->status != "SERVED") {
                 addBlocker("kitchen_task", task->id, task->status);
             }
         }
@@ -115,6 +121,15 @@ OperationResult evaluateCreateBill(const FileDatabase &database, const SessionRe
             "RESOLVE_ORDER_OR_KITCHEN_WORK");
         result.contextJson = "{\"blockers\":" + blockers + "}";
         result.notificationTargets = {"cashier", "customer"};
+        return result;
+    }
+    if (!hasSessionOrder) {
+        OperationResult result = OperationResult::failure(
+            "Submit an order before requesting the bill.",
+            "BILL_REQUIRES_ORDER",
+            "SUBMIT_ORDER_FIRST");
+        result.contextJson = "{\"blockers\":[{\"type\":\"session\",\"id\":" + std::to_string(session.id) + ",\"status\":\"NO_ORDERS\"}]}";
+        result.notificationTargets = {"customer"};
         return result;
     }
     return OperationResult::success("Bill can be created.", session.id, "BILL_ALLOWED");
@@ -133,6 +148,13 @@ OperationResult evaluatePayment(const FileDatabase &database, const BillRecord &
             session = &candidate;
             break;
         }
+    }
+    if (session == nullptr) {
+        return OperationResult::failure("Dining session not found for bill.", "SESSION_NOT_FOUND", "RELOAD_BILL");
+    }
+    OperationResult billDecision = evaluateCreateBill(database, *session);
+    if (!billDecision.ok) {
+        return billDecision;
     }
     if (session != nullptr && bill.sessionVersion != session->version) {
         return OperationResult::failure("Bill is stale. Recalculate before payment.", "BILL_STALE_RECALCULATE_REQUIRED", "RECALCULATE_BILL");
