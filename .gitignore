@@ -2,3 +2,8 @@ build/
 build-*/
 data/
 *.tmp
+
+# PPT Master workspace and local install/test artifacts
+ppt-master/
+.agents/ppt-master*/
+.agents/ppt-master-*
